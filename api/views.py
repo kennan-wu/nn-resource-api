@@ -1,14 +1,18 @@
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
-import tensorflow as tf
-from tensorflow import keras
-from keras.models import Sequential
-
-model = Sequential()
+from rest_framework import status
+from .services.serializers import NeuralNetworkSerializer
+from .services.neural_networks import create_neural_network
 
 @api_view(["POST"])
 def initialize(request):
-    data = request.data
-    input_neurons = data.get('input_neurons')
-    hidden_layers = data.get('hidden_layers', [])
-    output_neurons = data.get('output_neurons')
+    # validate api input data
+    serializer = NeuralNetworkSerializer(data=request.data)
+
+    if serializer.is_valid():
+        # Create neural network
+        layers = serializer.validated_data['layers']
+        model = create_neural_network(layers)
+
+        message = 'Neural Network created successfully'
+        return message

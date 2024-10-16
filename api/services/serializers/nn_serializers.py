@@ -1,23 +1,14 @@
 from rest_framework import serializers
-from tensorflow import keras
 from keras import layers
 
 class LayerSerializer(serializers.Serializer):
-    type = serializers.CharField(default="")
+    type = serializers.ChoiceField(choices=['Dense'], default='Dense')
     neurons = serializers.IntegerField()
     activation = serializers.ChoiceField(choices=['relu', 'sigmoid', 'softmax', 'tanh'])
-    inputDim = serializers.IntegerField()
-    outputDim = serializers.IntegerField()
 
     def validate_type(self, value):
-        try:
-            layer_class = eval(f"layers.{value}")
-            
-            if not isinstance(layer_class, type) or not issubclass(layer_class, layers.Layer):
-                raise serializers.ValidationError(f"{value} is not a valid Keras layer type.")
-        except (AttributeError, NameError):
-            raise serializers.ValidationError(f"{value} is not a valid Keras layer type.")
-        
+        if value != 'Dense':
+            raise serializers.ValidationError(f"{value} is not allowed. Only 'Dense' layer is accepted.")
         return value
 
 

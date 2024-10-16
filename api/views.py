@@ -1,18 +1,29 @@
 from django.http import JsonResponse
-from rest_framework.decorators import api_view
-from rest_framework import status
-from .services.serializers import NeuralNetworkSerializer
-from .services.neural_networks import create_neural_network
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from .services.serializers.nn_serializers import NeuralNetworkSerializer
+from .services.neural_network_services.neural_networks import createNeuralNetwork
 
-@api_view(["POST"])
-def initialize(request):
-    # validate api input data
-    serializer = NeuralNetworkSerializer(data=request.data)
+class NeuralNetworkViewSet(viewsets.ViewSet):
+    """
+    ViewSet for Neural Network Operations
+    """
+    def create(self, request):
+        # Validate API input data
+        serializer = NeuralNetworkSerializer(data=request.data)
 
-    if serializer.is_valid():
-        # Create neural network
-        layers = serializer.validated_data['layers']
-        model = create_neural_network(layers)
+        if serializer.is_valid():
+            # Create neural network
+            layers = serializer.validated_data['layers']
+            model = createNeuralNetwork(layers)
 
-        message = 'Neural Network created successfully'
-        return message
+            message = 'Neural Network created successfully'
+            return Response({'message': message}, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve_network_info(self, request, pk=None):
+        """
+        Retrieve information about the neural network for frontend rendering
+        """
+        

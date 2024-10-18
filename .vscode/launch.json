@@ -8,7 +8,7 @@
       "name": "Python Debugger: Current File",
       "type": "debugpy",
       "request": "launch",
-      "program": "api/services/neural_network_services/neural_networks.py",
+      "program": "api/services/s3_services/S3_file_manager.py",
       "console": "integratedTerminal"
     }
   ]

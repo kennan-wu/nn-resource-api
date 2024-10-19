@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from .services.serializers.nn_serializers import NeuralNetworkSerializer
+from .services.serializers.nn_serializers import CreateNNRequestSerializer, NeuralNetworkSerializer
 from .services.neural_network_services.neural_networks import NeuralNetworkFactory
 from .services.aws_services.S3_file_manager import S3FileManager
 from dotenv import load_dotenv
@@ -32,13 +32,13 @@ class NeuralNetworkViewSet(viewsets.ViewSet):
         Creates a Neural Network, posts metadata of the NN to the database, 
         and uploads the model to S3.
         """
-        serializer = NeuralNetworkSerializer(data=request.data)
+        requestSerializer = CreateNNRequestSerializer(data=request.data)
 
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not requestSerializer.is_valid():
+            return Response(requestSerializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        layers = serializer.validated_data['layers']
-        input_shape = serializer.validated_data['input_shape']
+        layers = requestSerializer.validated_data['layers']
+        input_shape = requestSerializer.validated_data['input_shape']
         
         nn_model = NeuralNetworkFactory(layers, input_shape)
 
@@ -60,8 +60,16 @@ class NeuralNetworkViewSet(viewsets.ViewSet):
             self.s3_manager.upload_stream(model_stream, s3_key)
         except Exception as e:
             message = f'Neural Network created but failed to upload to S3: {str(e)}'
+
+        serialized_nn_metadata = NeuralNetworkSerializer(nn_metadata)
         
-        return Response({'message': message}, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                'status': 'success',
+                'message': message,
+                'data': serialized_nn_metadata.data
+            },
+            status=status.HTTP_201_CREATED)
             
 
     def retrieve_network_info(self, request, pk=None):

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from ...models import NeuralNetwork
 
 class LayerSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['Dense'], default='Dense')
@@ -11,7 +12,7 @@ class LayerSerializer(serializers.Serializer):
         return value
 
 
-class NeuralNetworkSerializer(serializers.Serializer):
+class CreateNNRequestSerializer(serializers.Serializer):
     name = serializers.CharField(required=True, max_length=200)
     layers = LayerSerializer(many=True)
     input_shape = serializers.ListField(child=serializers.IntegerField(), min_length=1)
@@ -22,3 +23,8 @@ class NeuralNetworkSerializer(serializers.Serializer):
             raise serializers.ValidationError("The neural network must have more than a single layer.")
         
         return data
+
+class NeuralNetworkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NeuralNetwork
+        fields = '__all__'

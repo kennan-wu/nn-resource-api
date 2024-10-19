@@ -2,6 +2,7 @@ import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 import os
 from dotenv import load_dotenv
+from io import BytesIO
 
 class S3FileManager:
     def __init__(self, bucket_name, aws_access_key=None, aws_secret_key=None, region_name=None):
@@ -13,17 +14,15 @@ class S3FileManager:
         )
         self.bucket_name = bucket_name
 
-    def upload_file(self, file_path, s3_key):
+    def upload_stream(self, file_stream, s3_key):
         """
-        Uploads a file to the specified S3 bucket.
-        :param file_path: The local path of the file to upload.
+        Uploads a file stream to the specified S3 bucket.
+        :param file_stream: The in-memory stream of the file to upload.
         :param s3_key: The key (path/filename) to use for the file in S3.
         """
         try:
-            self.s3_client.upload_file(file_path, self.bucket_name, s3_key)
-            print(f"File '{file_path}' uploaded successfully to '{self.bucket_name}/{s3_key}'.")
-        except FileNotFoundError:
-            print(f"The file '{file_path}' was not found.")
+            self.s3_client.upload_fileobj(file_stream, self.bucket_name, s3_key)
+            print(f"File stream uploaded successfully to '{self.bucket_name}/{s3_key}'.")
         except NoCredentialsError:
             print("Credentials not available.")
         except ClientError as e:
@@ -42,18 +41,3 @@ class S3FileManager:
             print("Credentials not available.")
         except ClientError as e:
             print(f"Failed to download file: {e}")
-
-load_dotenv()
-base_dir = os.path.dirname(__file__)
-file_path = os.path.join(base_dir, 'test.txt')
-
-bucket_name = os.getenv('NN_BUCKET_NAME')
-aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
-aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
-region_name = os.getenv('AWS_REGION')
-
-s3_manager = S3FileManager(bucket_name, aws_access_key, aws_secret_key, region_name)
-
-# s3_manager.upload_file(filvx8e_path, 'neural-networks/test.txt')
-
-s3_manager.download_file('test.txt', file_path)

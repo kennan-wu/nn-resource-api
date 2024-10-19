@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from keras import layers
 
 class LayerSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['Dense'], default='Dense')
@@ -13,10 +12,13 @@ class LayerSerializer(serializers.Serializer):
 
 
 class NeuralNetworkSerializer(serializers.Serializer):
+    name = serializers.CharField(required=True, max_length=200)
     layers = LayerSerializer(many=True)
+    input_shape = serializers.ListField(child=serializers.IntegerField(), min_length=1)
 
-    def validateLength(self, data):
+    def validate(self, data):
         layers = data.get('layers', [])
         if len(layers) < 2:
-            message = "The neural network must have more than a single layer"
-            raise serializers.ValidationError(message)
+            raise serializers.ValidationError("The neural network must have more than a single layer.")
+        
+        return data

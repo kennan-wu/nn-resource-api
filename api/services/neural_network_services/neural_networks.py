@@ -2,14 +2,15 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 from tensorflow import keras
+import io
 
-class NeuralNetworkModel:
+class NeuralNetworkFactory:
     def __init__(self, layers, input_shape):
         self.layers = layers
-        self.input_shape = input_shape
-        self.model = self._create_neural_network()
+        self.input_shape = tuple(input_shape)
+        self.model = self.create_neural_network()
     
-    def _create_neural_network(self):
+    def create_neural_network(self):
         model = keras.Sequential()
         model.add(keras.layers.Input(shape=self.input_shape))
         
@@ -19,8 +20,16 @@ class NeuralNetworkModel:
         
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         model.build(input_shape=(None,) + self.input_shape)
-        model.save('nn.keras')
         return model
+    
+    def serialize_model(self):
+        """
+        Serializes the model to an in-memory buffer.
+        Returns a BytesIO object containing the serialized model data.
+        """
+        model_stream = io.BytesIO()
+        model_stream.seek(0)
+        return model_stream
     
     def network_information(self):
         network_info = []
@@ -48,12 +57,12 @@ class NeuralNetworkModel:
         
         return network_info
 
-layers = [
-    {'type': 'Dense', 'neurons': 5, 'activation': 'sigmoid'},
-    {'type': 'Dense', 'neurons': 1, 'activation': 'sigmoid'}
-]
-input_shape = (2,)
+# layers = [
+#     {'type': 'Dense', 'neurons': 5, 'activation': 'sigmoid'},
+#     {'type': 'Dense', 'neurons': 1, 'activation': 'sigmoid'}
+# ]
+# input_shape = (2,)
 
-nn_model = NeuralNetworkModel(layers, input_shape)
+# nn_model = NeuralNetworkModel(layers, input_shape)
 
-print(nn_model.network_information())
+# print(nn_model.network_information())

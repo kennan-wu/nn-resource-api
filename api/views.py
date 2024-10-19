@@ -1,29 +1,71 @@
-from django.http import JsonResponse
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .services.serializers.nn_serializers import NeuralNetworkSerializer
-from .services.neural_network_services.neural_networks import createNeuralNetwork
+from .services.neural_network_services.neural_networks import NeuralNetworkFactory
+from .services.aws_services.S3_file_manager import S3FileManager
+from dotenv import load_dotenv
+from .models import NeuralNetwork
+import os
+
+load_dotenv()
+base_dir = os.path.dirname(__file__)
+file_path = os.path.join(base_dir, 'test.txt')
+
+bucket_name = os.getenv('NN_BUCKET_NAME')
+aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+region_name = os.getenv('AWS_REGION')
+
+s3_manager = S3FileManager(bucket_name, aws_access_key, aws_secret_key, region_name)
+
+def index(request):
+    return Response("Hello, world. You're at the api index.")
 
 class NeuralNetworkViewSet(viewsets.ViewSet):
     """
     ViewSet for Neural Network Operations
     """
+    s3_manager = s3_manager
+
     def create(self, request):
-        # Validate API input data
+        """
+        Creates a Neural Network, posts metadata of the NN to the database, 
+        and uploads the model to S3.
+        """
         serializer = NeuralNetworkSerializer(data=request.data)
 
-        if serializer.is_valid():
-            # Create neural network
-            layers = serializer.validated_data['layers']
-            model = createNeuralNetwork(layers)
-
-            message = 'Neural Network created successfully'
-            return Response({'message': message}, status=status.HTTP_201_CREATED)
-        else:
+        if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        layers = serializer.validated_data['layers']
+        input_shape = serializer.validated_data['input_shape']
+        
+        nn_model = NeuralNetworkFactory(layers, input_shape)
+
+        try:
+            nn_metadata = NeuralNetwork.objects.create(
+                name=request.data.get('name')
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to save neural network metadata to the database: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        model_stream = nn_model.serialize_model()
+        s3_key = f'neural-networks/{nn_metadata.id}.keras'
+        message = 'Neural Network created successfully'
+
+        try:
+            self.s3_manager.upload_stream(model_stream, s3_key)
+        except Exception as e:
+            message = f'Neural Network created but failed to upload to S3: {str(e)}'
+        
+        return Response({'message': message}, status=status.HTTP_201_CREATED)
+            
 
     def retrieve_network_info(self, request, pk=None):
         """
         Retrieve information about the neural network for frontend rendering
         """
-        
+        pass  

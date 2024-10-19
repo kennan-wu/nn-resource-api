@@ -80,6 +80,12 @@ class NeuralNetworkViewSet(viewsets.ViewSet):
         pass  
 
     def test_download(self, request):
+        """
+        Downloads a file from the specified S3 bucket.
+        :param s3_key: The key (path/filename) in S3 to download.
+        :param local_path: The local path where the file should be saved.
+        """
+        
         s3_key = 'neural-networks/6da09180-c43c-4c6a-9a29-1f8a00da0995.keras'
         local_path = '/Users/luna/Downloads/6da09180-c43c-4c6a-9a29-1f8a00da0995.keras'
 

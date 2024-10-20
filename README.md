@@ -23,7 +23,7 @@ There is an admin endpoint that allows you to work with database items through a
 
 ### Creating and modifying neural networks
 
-**Enpoint:** `POST /api/nn/start`
+**Enpoint:** `POST /api/nn/create`
 
 - Creates a Neural Network whose metadata is posted to the SQLite database, and the file of the neural net is uploaded to S3
 

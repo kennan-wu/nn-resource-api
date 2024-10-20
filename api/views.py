@@ -5,6 +5,7 @@ from .services.neural_network_services.neural_networks import NeuralNetworkFacto
 from .services.aws_services.S3_file_manager import S3FileManager
 from dotenv import load_dotenv
 from .models import NeuralNetwork
+from botocore.exceptions import ClientError, NoCredentialsError
 import os
 
 load_dotenv()
@@ -77,3 +78,31 @@ class NeuralNetworkViewSet(viewsets.ViewSet):
         Retrieve information about the neural network for frontend rendering
         """
         pass  
+
+    def test_download(self, request):
+        """
+        Downloads a file from the specified S3 bucket.
+        :param s3_key: The key (path/filename) in S3 to download.
+        :param local_path: The local path where the file should be saved.
+        """
+        
+        s3_key = 'neural-networks/6da09180-c43c-4c6a-9a29-1f8a00da0995.keras'
+        local_path = '/Users/luna/Downloads/6da09180-c43c-4c6a-9a29-1f8a00da0995.keras'
+
+        try:
+            self.s3_manager.download_file(s3_key, local_path)
+            if os.path.exists(local_path):
+                return Response(
+                    {"message": f"File '{s3_key}' downloaded successfully to '{local_path}'."},
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    {"error": f"File '{s3_key}' did not download successfully."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        except ClientError as e:
+            return Response(
+                {"error": f"Failed to download file: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -1,15 +1,22 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+import json
+import tensorflow as tf
 from tensorflow import keras
 import io
+import tempfile
+import shutil
 
 class NeuralNetworkFactory:
-    def __init__(self, layers, input_shape):
+    def __init__(self, layers, input_shape, name, description=None):
         self.layers = layers
         self.input_shape = tuple(input_shape)
+        self.name = name
+        self.description = description
         self.model = self.create_neural_network()
-    
+        self.db_representation = self.serialize_for_db()
+        
     def create_neural_network(self):
         model = keras.Sequential()
         model.add(keras.layers.Input(shape=self.input_shape))
@@ -21,48 +28,68 @@ class NeuralNetworkFactory:
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
         model.build(input_shape=(None,) + self.input_shape)
         return model
-    
-    def serialize_model(self):
+
+    def get_keras_file_stream(self):
         """
         Serializes the model to an in-memory buffer.
         Returns a BytesIO object containing the serialized model data.
         """
-        model_stream = io.BytesIO()
-        model_stream.seek(0)
-        return model_stream
-    
-    def network_information(self):
-        network_info = []
+        temp_dir = tempfile.mkdtemp()
 
-        input_layer_info = {
-            'layer_index': 0,
-            'layer_type': 'InputLayer',
-            'neurons': self.input_shape[0], 
-            'weights': None,
-            'biases': None,
-            'activation': None
+        try:
+            keras_file_path = os.path.join(temp_dir, 'model.keras')
+            self.model.save(keras_file_path, overwrite=True)
+            model_stream = io.BytesIO()
+            with open(keras_file_path, 'rb') as f:
+                model_stream.write(f.read())
+            
+            model_stream.seek(0)
+            return model_stream
+
+        finally:
+            shutil.rmtree(temp_dir)
+
+    def serialize_for_db(self):
+        model_info = {
+            'name': self.name,
+            'description': self.description,
+            'input_shape': list(self.input_shape),
+            'layers': [
+                {
+                    'type': layer.__class__.__name__,
+                    'neurons': layer.get_config().get('units') if 'units' in layer.get_config() else None,
+                    'activation': layer.get_config().get('activation')
+                } for layer in self.model.layers
+            ]
         }
-        network_info.append(input_layer_info)
-        
+        return model_info
+
+    def get_json_file_stream(self):
+        model_data = []
+
         for i, layer in enumerate(self.model.layers):
             layer_info = {
-                'layer_index': i + 1,
-                'layer_type': layer.__class__.__name__,
-                'neurons': layer.units if hasattr(layer, 'units') else None,
-                'weights': layer.get_weights()[0].tolist() if layer.get_weights() else None,
-                'biases': layer.get_weights()[1].tolist() if len(layer.get_weights()) > 1 else None,
-                'activation': layer.activation.__name__ if hasattr(layer, 'activation') else None
+                'weights': None,
+                'biases': None,
+                'activation_values': [None] * (layer.get_config().get('units') if 'units' in layer.get_config() else 0)
             }
-            network_info.append(layer_info)
-        
-        return network_info
+
+            weights_biases = layer.get_weights()
+            if weights_biases:
+                weights, biases = weights_biases if len(weights_biases) == 2 else (weights_biases[0], None)
+                layer_info['weights'] = weights.tolist() if weights is not None else None
+                layer_info['biases'] = biases.tolist() if biases is not None else None
+
+            model_data.append(layer_info)
+
+        json_data = json.dumps(model_data)
+        return io.BytesIO(json_data.encode('utf-8'))
 
 # layers = [
 #     {'type': 'Dense', 'neurons': 5, 'activation': 'sigmoid'},
 #     {'type': 'Dense', 'neurons': 1, 'activation': 'sigmoid'}
 # ]
-# input_shape = (2,)
+# input_shape = [2,]
+# name = "test"
 
-# nn_model = NeuralNetworkModel(layers, input_shape)
-
-# print(nn_model.network_information())
+# nn_model = NeuralNetworkFactory(layers, input_shape, name)

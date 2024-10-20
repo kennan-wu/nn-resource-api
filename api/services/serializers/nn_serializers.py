@@ -14,6 +14,7 @@ class LayerSerializer(serializers.Serializer):
 
 class CreateNNRequestSerializer(serializers.Serializer):
     name = serializers.CharField(required=True, max_length=200)
+    description = serializers.CharField(required=False, max_length=255)
     layers = LayerSerializer(many=True)
     input_shape = serializers.ListField(child=serializers.IntegerField(), min_length=1)
 

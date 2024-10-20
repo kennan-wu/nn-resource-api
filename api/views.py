@@ -39,25 +39,29 @@ class NeuralNetworkViewSet(viewsets.ViewSet):
         
         layers = requestSerializer.validated_data['layers']
         input_shape = requestSerializer.validated_data['input_shape']
+        description = requestSerializer.validated_data.get('description')
+        name = requestSerializer.validated_data['name']
         
-        nn_model = NeuralNetworkFactory(layers, input_shape)
+        nn_model = NeuralNetworkFactory(layers, input_shape, name, description)
 
         try:
-            nn_metadata = NeuralNetwork.objects.create(
-                name=request.data.get('name')
-            )
+            nn_metadata = NeuralNetwork.objects.create(**nn_model.db_representation)
         except Exception as e:
             return Response(
                 {"error": f"Failed to save neural network metadata to the database: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        model_stream = nn_model.serialize_model()
-        s3_key = f'neural-networks/{nn_metadata.id}.keras'
+        keras_model_stream = nn_model.get_keras_file_stream()
+        json_model_stream = nn_model.get_json_file_stream()
+        s3_keras_key = f'keras-neural-networks/{nn_metadata.id}.keras'
+        s3_json_key = f'json-neural-networks/{nn_metadata.id}.json'
+
         message = 'Neural Network created successfully'
 
         try:
-            self.s3_manager.upload_stream(model_stream, s3_key)
+            self.s3_manager.upload_stream(keras_model_stream, s3_keras_key)
+            self.s3_manager.upload_stream(json_model_stream, s3_json_key)
         except Exception as e:
             message = f'Neural Network created but failed to upload to S3: {str(e)}'
 

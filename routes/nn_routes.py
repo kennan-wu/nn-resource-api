@@ -15,6 +15,10 @@ async def get_all_neural_networks(
     user = user_service.get_user(user_id)
     return nn_service.getAllNN(user)
 
+@nn_router.get("/{nn_id}")
+async def get_nn_with_id(nn_id: str, nn_service: nn_service_dep):
+    return nn_service.getNN(nn_id)
+
 @nn_router.post("/")
 async def create_neural_network(
     user_id: str,

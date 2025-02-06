@@ -3,7 +3,7 @@ from bson import ObjectId
 from fastapi import HTTPException
 from models.request.create_nn_request import CreateNNRequest
 from models.user import User
-from schema.nn_schema import individual_nn_serial, list_nn_serial
+from schema.nn_schema import individual_nn_serial, list_nn_serial, list_nn_metadata_serial
 from config.database import nn_collection, client
 from services.keras_service import KerasService
 from services.s3_service import S3Service
@@ -12,7 +12,7 @@ from services.user_service import UserService
 
 class NNService:
     def getAllNN(self, user: User):
-        return list_nn_serial(user.neural_network_metadatas)
+        return user.neural_network_metadatas
 
     def getNN(self, nn_id: str):
         nn = nn_collection.find_one({"_id": ObjectId(nn_id)})
@@ -20,7 +20,7 @@ class NNService:
         if nn:
             return individual_nn_serial(nn)
         else:
-            raise HTTPException(status_code=4004, detail="Neural network not found")
+            raise HTTPException(status_code=404, detail="Neural network not found")
         
     def createNN(self, user: User, 
                  nn_data: CreateNNRequest,
@@ -47,7 +47,7 @@ class NNService:
 
     def _uploadMetadataModelToDB(self, nn_data, model_id, nn_url, user_id, user_service, session):
         nn_metadata_dict = self._createNNMetadataDict(nn_data, model_id, nn_url)
-        user = user_service.update_field("neural_netwwork_metadata", user_id, "$push", nn_metadata_dict, session)
+        user = user_service.update_field("neural_network_metadatas", user_id, "$push", nn_metadata_dict, session)
         return user
 
     def _uploadModelToBucket(self, model, keras_service: KerasService, s3_service: S3Service, user_id, model_id):

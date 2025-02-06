@@ -37,7 +37,15 @@ class KerasService:
                     selected_weights = weights
                 else:
                     selected_biases = np.concatenate([biases[:8], biases[-8:]])
-                    selected_weights = np.concatenate([weights[:8], weights[-8:]], axis=0)
+
+                    if weights.shape[0] > 16:
+                        selected_weights = np.concatenate([
+                            np.concatenate([weights[:8, :8], weights[:8, -8:]], axis=1),
+                            np.concatenate([weights[-8:, :8], weights[-8:, -8:]], axis=1)
+                        ], axis=0)
+
+                    else:
+                        selected_weights = np.concatenate([weights[:, :8], weights[:, -8:]], axis=1)
 
                 layer_dict = {
                     "layerIndex": i,

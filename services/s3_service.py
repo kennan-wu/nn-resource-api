@@ -5,13 +5,14 @@ from botocore.exceptions import NoCredentialsError, ClientError
 
 load_dotenv()
 
+
 class S3Service:
     def __init__(self):
         self.s3_client = boto3.client(
-            's3',
+            "s3",
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION")
+            region_name=os.getenv("AWS_REGION"),
         )
         self.bucket_name = os.getenv("AWS_NN_BUCKET_NAME")
 
@@ -40,7 +41,17 @@ class S3Service:
         """
         try:
             self.s3_client.download_file(self.bucket_name, s3_key, local_path)
-            print(f"File '{s3_key}' downloaded successfully from '{self.bucket_name}' to '{local_path}'.")
+            print(
+                f"File '{s3_key}' downloaded successfully from '{self.bucket_name}' to '{local_path}'."
+            )
+        except NoCredentialsError:
+            print("Credentials not available.")
+        except ClientError as e:
+            print(f"Failed to download file: {e}")
+
+    def delete_file(self, s3_key):
+        try:
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
         except NoCredentialsError:
             print("Credentials not available.")
         except ClientError as e:

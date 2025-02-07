@@ -4,6 +4,7 @@ from config.database import user_collection
 from bson import ObjectId
 from fastapi import HTTPException
 
+
 class UserService:
     def get_user(self, user_id: str) -> User:
         user = user_collection.find_one({"_id": ObjectId(user_id)})
@@ -12,8 +13,10 @@ class UserService:
             return individual_user_serial(user)
         else:
             raise HTTPException(status_code=404, detail="User not found")
-        
-    def update_field(self, field: str, user_id: str, action: str, payload, session=None) -> User:        
+
+    def update_field(
+        self, field: str, user_id: str, action: str, payload, session=None
+    ) -> User:
         update_query = {action: {field: payload}}
 
         updated_user = user_collection.find_one_and_update(
@@ -21,10 +24,14 @@ class UserService:
             update_query,
             session=session,
             return_document=True,
-            upsert=True
+            upsert=True,
         )
 
-        if not updated_user:
-            raise HTTPException(status_code=404, detail="User not found")
+        if updated_user is None:
+            updated_user = user_collection.find_one(
+                {"_id": ObjectId(user_id)}, session=session
+            )
+            if updated_user is None:
+                raise HTTPException(status_code=404, detail="User not found")
 
         return individual_user_serial(updated_user)
